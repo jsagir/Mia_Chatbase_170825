@@ -19,6 +19,15 @@ module.exports = async (req, res) => {
     const CHATBOT_ID = process.env.CHATBOT_ID;
     const CHATBASE_SECRET_KEY = process.env.CHATBASE_SECRET_KEY;
     
+    // Debug log to check environment variables
+    console.log('Environment check:', { 
+      hasApi: !!process.env.CHATBASE_API, 
+      hasBot: !!process.env.CHATBOT_ID, 
+      hasSecret: !!process.env.CHATBASE_SECRET_KEY,
+      secretLength: process.env.CHATBASE_SECRET_KEY?.length,
+      allEnvKeys: Object.keys(process.env).filter(key => key.includes('CHAT'))
+    });
+    
     if (!CHATBASE_API_KEY || !CHATBOT_ID || !CHATBASE_SECRET_KEY) {
       return res.status(500).json({
         error: 'Missing configuration. Please set all environment variables.',
@@ -42,6 +51,8 @@ module.exports = async (req, res) => {
     const hmac = crypto.createHmac('sha256', CHATBASE_SECRET_KEY)
       .update(userId)
       .digest('hex');
+    
+    console.log('HMAC generated:', { userId, hmacLength: hmac.length });
     
     const response = await axios.post(
       'https://www.chatbase.co/api/v1/chat',
