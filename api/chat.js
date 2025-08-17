@@ -19,11 +19,9 @@ module.exports = async (req, res) => {
     
     if (!CHATBASE_API_KEY || !CHATBOT_ID) {
       return res.status(500).json({
-        error: 'Missing configuration. Please set environment variables.',
-        missing: {
-          api: !CHATBASE_API_KEY,
-          chatbot: !CHATBOT_ID
-        }
+        error: 'Missing configuration',
+        hasApiKey: !!CHATBASE_API_KEY,
+        hasChatbotId: !!CHATBOT_ID
       });
     }
     
@@ -35,18 +33,12 @@ module.exports = async (req, res) => {
       });
     }
     
-    // Simple request without HMAC authentication
+    // Simple request - NO user_id or user_hash
     const requestBody = {
       messages: conversation,
       chatbotId: CHATBOT_ID,
       stream: false
     };
-    
-    console.log('Sending request to Chatbase:', {
-      url: 'https://www.chatbase.co/api/v1/chat',
-      chatbotId: CHATBOT_ID,
-      messageCount: conversation.length
-    });
     
     const response = await axios.post(
       'https://www.chatbase.co/api/v1/chat',
@@ -63,21 +55,11 @@ module.exports = async (req, res) => {
     return res.status(200).json({ response: botResponse });
     
   } catch (error) {
-    console.error('Chatbase API Error:', {
-      status: error.response?.status,
-      statusText: error.response?.statusText,
-      data: error.response?.data
-    });
-    
     return res.status(500).json({
       error: 'Failed to get response',
       details: error.message,
       status: error.response?.status,
-      chatbaseError: error.response?.data,
-      requestInfo: {
-        chatbotId: CHATBOT_ID,
-        hasApiKey: !!CHATBASE_API_KEY
-      }
+      chatbaseError: error.response?.data
     });
   }
 };
