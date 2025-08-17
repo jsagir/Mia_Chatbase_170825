@@ -21,7 +21,7 @@ module.exports = async (req, res) => {
     
     if (!CHATBASE_API_KEY || !CHATBOT_ID) {
       return res.status(500).json({
-        error: 'Missing configuration',
+        error: 'Missing configuration. Please set environment variables.',
         missing: {
           api: !CHATBASE_API_KEY,
           chatbot: !CHATBOT_ID
@@ -37,43 +37,31 @@ module.exports = async (req, res) => {
       });
     }
     
-    // Build request payload
-    let payload = {
+    // First, try WITHOUT HMAC authentication
+    let requestBody = {
       messages: conversation,
       chatbotId: CHATBOT_ID,
       stream: false
     };
     
-    // Add HMAC if secret key exists
+    // Only add HMAC fields if secret key exists
     if (CHATBASE_SECRET_KEY) {
       const userHash = crypto.createHmac('sha256', CHATBASE_SECRET_KEY)
         .update(userId)
         .digest('hex');
       
-      payload.user_id = userId;
-      payload.user_hash = userHash;
-      
-      console.log('Using HMAC authentication:', {
-        userId,
-        hashLength: userHash.length,
-        secretLength: CHATBASE_SECRET_KEY.length
-      });
-    } else {
-      console.log('No HMAC - secret key not provided');
+      // Try adding these in a user object instead
+      requestBody.user = {
+        id: userId,
+        hash: userHash
+      };
     }
     
-    console.log('Chatbase request:', {
-      url: 'https://www.chatbase.co/api/v1/chat',
-      chatbotId: CHATBOT_ID,
-      messageCount: conversation.length,
-      hasAuth: !!CHATBASE_API_KEY,
-      authLength: CHATBASE_API_KEY?.length,
-      hasHMAC: !!payload.user_hash
-    });
+    console.log('Request body:', JSON.stringify(requestBody, null, 2));
     
     const response = await axios.post(
       'https://www.chatbase.co/api/v1/chat',
-      payload,
+      requestBody,
       {
         headers: {
           'Authorization': `Bearer ${CHATBASE_API_KEY}`,
@@ -82,12 +70,7 @@ module.exports = async (req, res) => {
       }
     );
     
-    console.log('Chatbase success:', {
-      status: response.status,
-      hasResponse: !!response.data
-    });
-    
-    const botResponse = response.data.text || response.data.answer || response.data.message || 'No response';
+    const botResponse = response.data.text || response.data.answer || 'No response';
     return res.status(200).json({ response: botResponse });
     
   } catch (error) {
@@ -95,19 +78,18 @@ module.exports = async (req, res) => {
       status: error.response?.status,
       statusText: error.response?.statusText,
       data: error.response?.data,
-      message: error.message
+      headers: error.response?.headers
     });
     
-    // Return detailed error info
     return res.status(500).json({
       error: 'Failed to get response',
       details: error.message,
       status: error.response?.status,
-      chatbaseError: error.response?.data || 'No response data',
+      chatbaseError: error.response?.data,
       requestInfo: {
-        chatbotId: process.env.CHATBOT_ID,
-        hasApiKey: !!process.env.CHATBASE_API,
-        hasSecret: !!process.env.CHATBASE_SECRET_KEY
+        chatbotId: CHATBOT_ID,
+        hasApiKey: !!CHATBASE_API_KEY,
+        hasSecret: !!CHATBASE_SECRET_KEY
       }
     });
   }
