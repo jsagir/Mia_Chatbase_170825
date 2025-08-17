@@ -1,5 +1,4 @@
 const axios = require('axios');
-const crypto = require('crypto');
 
 module.exports = async (req, res) => {
   res.setHeader('Access-Control-Allow-Origin', '*');
@@ -17,7 +16,6 @@ module.exports = async (req, res) => {
   try {
     const CHATBASE_API_KEY = process.env.CHATBASE_API;
     const CHATBOT_ID = process.env.CHATBOT_ID;
-    const CHATBASE_SECRET_KEY = process.env.CHATBASE_SECRET_KEY;
     
     if (!CHATBASE_API_KEY || !CHATBOT_ID) {
       return res.status(500).json({
@@ -29,7 +27,7 @@ module.exports = async (req, res) => {
       });
     }
     
-    const { conversation, userId = 'default-user' } = req.body;
+    const { conversation } = req.body;
     
     if (!conversation || !Array.isArray(conversation)) {
       return res.status(400).json({
@@ -37,27 +35,18 @@ module.exports = async (req, res) => {
       });
     }
     
-    // First, try WITHOUT HMAC authentication
-    let requestBody = {
+    // Simple request without HMAC authentication
+    const requestBody = {
       messages: conversation,
       chatbotId: CHATBOT_ID,
       stream: false
     };
     
-    // Only add HMAC fields if secret key exists
-    if (CHATBASE_SECRET_KEY) {
-      const userHash = crypto.createHmac('sha256', CHATBASE_SECRET_KEY)
-        .update(userId)
-        .digest('hex');
-      
-      // Try adding these in a user object instead
-      requestBody.user = {
-        id: userId,
-        hash: userHash
-      };
-    }
-    
-    console.log('Request body:', JSON.stringify(requestBody, null, 2));
+    console.log('Sending request to Chatbase:', {
+      url: 'https://www.chatbase.co/api/v1/chat',
+      chatbotId: CHATBOT_ID,
+      messageCount: conversation.length
+    });
     
     const response = await axios.post(
       'https://www.chatbase.co/api/v1/chat',
@@ -77,8 +66,7 @@ module.exports = async (req, res) => {
     console.error('Chatbase API Error:', {
       status: error.response?.status,
       statusText: error.response?.statusText,
-      data: error.response?.data,
-      headers: error.response?.headers
+      data: error.response?.data
     });
     
     return res.status(500).json({
@@ -88,8 +76,7 @@ module.exports = async (req, res) => {
       chatbaseError: error.response?.data,
       requestInfo: {
         chatbotId: CHATBOT_ID,
-        hasApiKey: !!CHATBASE_API_KEY,
-        hasSecret: !!CHATBASE_SECRET_KEY
+        hasApiKey: !!CHATBASE_API_KEY
       }
     });
   }
