@@ -14,16 +14,14 @@ module.exports = async (req, res) => {
   }
   
   try {
-    const CHATBASE_API_KEY = process.env.CHATBASE_API;
-    const CHATBOT_ID = process.env.CHATBOT_ID;
+    // HARDCODED CREDENTIALS FOR TESTING
+    const CHATBASE_API_KEY = '8171b8f9-aac3-4b77-8175-226cc23e4d9b';
+    const CHATBOT_ID = 'MNPuL5RkxOrS4SeEetwE6';
     
-    if (!CHATBASE_API_KEY || !CHATBOT_ID) {
-      return res.status(500).json({
-        error: 'Missing configuration',
-        hasApiKey: !!CHATBASE_API_KEY,
-        hasChatbotId: !!CHATBOT_ID
-      });
-    }
+    console.log('Using hardcoded credentials:', {
+      apiKey: CHATBASE_API_KEY.substring(0, 8) + '...',
+      chatbotId: CHATBOT_ID
+    });
     
     const { conversation } = req.body;
     
@@ -33,12 +31,13 @@ module.exports = async (req, res) => {
       });
     }
     
-    // Simple request - NO user_id or user_hash
     const requestBody = {
       messages: conversation,
       chatbotId: CHATBOT_ID,
       stream: false
     };
+    
+    console.log('Sending to Chatbase:', JSON.stringify(requestBody, null, 2));
     
     const response = await axios.post(
       'https://www.chatbase.co/api/v1/chat',
@@ -55,11 +54,17 @@ module.exports = async (req, res) => {
     return res.status(200).json({ response: botResponse });
     
   } catch (error) {
+    console.error('Full error:', error.response?.data);
+    
     return res.status(500).json({
       error: 'Failed to get response',
       details: error.message,
       status: error.response?.status,
-      chatbaseError: error.response?.data
+      chatbaseError: error.response?.data,
+      credentials: {
+        apiKey: '8171b8f9-aac3-4b77-8175-226cc23e4d9b'.substring(0, 8) + '...',
+        chatbotId: 'MNPuL5RkxOrS4SeEetwE6'
+      }
     });
   }
 };
