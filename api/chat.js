@@ -1,4 +1,5 @@
 const axios = require('axios');
+const crypto = require('crypto');
 
 module.exports = async (req, res) => {
   res.setHeader('Access-Control-Allow-Origin', '*');
@@ -16,14 +17,20 @@ module.exports = async (req, res) => {
   try {
     const CHATBASE_API_KEY = process.env.CHATBASE_API;
     const CHATBOT_ID = process.env.CHATBOT_ID;
+    const CHATBASE_SECRET_KEY = process.env.CHATBASE_SECRET_KEY;
     
-    if (!CHATBASE_API_KEY || !CHATBOT_ID) {
+    if (!CHATBASE_API_KEY || !CHATBOT_ID || !CHATBASE_SECRET_KEY) {
       return res.status(500).json({
-        error: 'Missing configuration. Please set environment variables.'
+        error: 'Missing configuration. Please set all environment variables.',
+        missing: {
+          api: !CHATBASE_API_KEY,
+          chatbot: !CHATBOT_ID,
+          secret: !CHATBASE_SECRET_KEY
+        }
       });
     }
     
-    const { conversation } = req.body;
+    const { conversation, userId = 'default-user' } = req.body;
     
     if (!conversation || !Array.isArray(conversation)) {
       return res.status(400).json({
@@ -31,18 +38,18 @@ module.exports = async (req, res) => {
       });
     }
     
-    console.log('Calling Chatbase with:', {
-      url: 'https://www.chatbase.co/api/v1/chat',
-      chatbotId: CHATBOT_ID,
-      hasApiKey: !!CHATBASE_API_KEY,
-      messageCount: conversation.length
-    });
+    // Generate HMAC for user authentication
+    const hmac = crypto.createHmac('sha256', CHATBASE_SECRET_KEY)
+      .update(userId)
+      .digest('hex');
     
     const response = await axios.post(
       'https://www.chatbase.co/api/v1/chat',
       {
         messages: conversation,
         chatbotId: CHATBOT_ID,
+        userId: userId,
+        userAuth: hmac,
         stream: false
       },
       {
@@ -60,8 +67,7 @@ module.exports = async (req, res) => {
     console.error('Chatbase API Error:', {
       status: error.response?.status,
       statusText: error.response?.statusText,
-      data: error.response?.data,
-      headers: error.response?.headers
+      data: error.response?.data
     });
     
     return res.status(500).json({
