@@ -23,6 +23,8 @@ module.exports = async (req, res) => {
       chatbotId: CHATBOT_ID
     });
     
+    console.log('Received request body:', JSON.stringify(req.body, null, 2));
+    
     const { conversation } = req.body;
     
     if (!conversation || !Array.isArray(conversation)) {
@@ -31,8 +33,14 @@ module.exports = async (req, res) => {
       });
     }
     
+    // Clean the conversation array to remove any extra fields
+    const cleanMessages = conversation.map(msg => ({
+      role: msg.role,
+      content: msg.content
+    }));
+    
     const requestBody = {
-      messages: conversation,
+      messages: cleanMessages,
       chatbotId: CHATBOT_ID,
       stream: false
     };
