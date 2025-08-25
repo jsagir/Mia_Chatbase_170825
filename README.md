@@ -105,16 +105,27 @@ vercel dev
 
 ### API Testing with cURL
 ```bash
-# Test chat endpoint
-curl -X POST https://your-app.vercel.app/api/chat \
+# Test chat endpoint (Production URL)
+curl -X POST https://mia-chatbase-170825.vercel.app/api/chat \
+  -H "Content-Type: application/json" \
+  -d '{"conversation": [{"role": "user", "content": "Hello"}]}'
+
+# Test alternative endpoint with cache-busting
+curl -X POST https://mia-chatbase-170825.vercel.app/api/chat-v2 \
   -H "Content-Type: application/json" \
   -d '{"conversation": [{"role": "user", "content": "Hello"}]}'
 
 # Check deployment status
-curl https://your-app.vercel.app/api/debug
+curl https://mia-chatbase-170825.vercel.app/api/debug
 ```
 
 ## 📝 Recent Updates
+
+### December 25, 2024 - Latest Deployment
+- ✅ **ISSUE RESOLVED**: Fixed "Unrecognized key(s) in object: 'user_id', 'user_hash'" error
+- Successfully redeployed latest code from GitHub to Vercel
+- Both `/api/chat` and `/api/chat-v2` endpoints are now working correctly
+- Deployment confirmed at 12:33 PM (Washington, D.C., USA - iad1)
 
 ### December 17, 2024
 - Removed HMAC authentication fields (`user_id`, `user_hash`) that were causing 400 errors
@@ -124,13 +135,15 @@ curl https://your-app.vercel.app/api/debug
 
 ## 🔍 Troubleshooting
 
-### "Unrecognized key(s)" Error
-If you see this error, ensure your request only includes:
-- `messages` (the conversation array)
-- `chatbotId` 
-- `stream` (set to `false`)
+### "Unrecognized key(s)" Error (RESOLVED)
+**Status: ✅ Fixed as of December 25, 2024**
 
-Do NOT include `user_id`, `user_hash`, or other authentication fields.
+This error was caused by outdated deployment including `user_id` and `user_hash` fields that Chatbase doesn't recognize. The issue has been resolved by redeploying the latest code.
+
+If you still encounter this error:
+- Ensure your request only includes: `messages`, `chatbotId`, `stream`
+- Try using the `/api/chat-v2` endpoint
+- Check `/api/debug` to verify you're using the latest deployment
 
 ### Deployment Not Updating
 1. Check deployment status at `/api/debug`
